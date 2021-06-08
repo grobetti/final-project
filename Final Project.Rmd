@@ -30,8 +30,9 @@ fonttable()
 windowsFonts(Times=windowsFont("TT Times New Roman"))
 ```
 
+1. Read the datasets
 ```{r}
-#Load the datasets into R
+#Load the datasets into R (already exclude some variables)
 
 COVID19Cases_geoRegion <- read_csv("COVID19Cases_geoRegion.csv", 
     col_types = cols(datum = col_character(), 
@@ -101,8 +102,23 @@ COVID19Test_geoRegion_all <- read_csv("COVID19Test_geoRegion_all.csv",
 #summary(COVID19Test_geoRegion_all)
 ```
 
+2. Clean and prepare the datasets
 ```{r}
-#Delete the rows for Switzerland and the Principality of Liechtenstein
+#Delete some more variables that we are not going to use
+
+COVID19Cases_geoRegion[4:10] <- list(NULL)
+COVID19Cases_geoRegion[8:9] <- list(NULL)
+COVID19Cases_geoRegion[9:22] <- list(NULL)
+COVID19Cases_geoRegion[11:15] <- list(NULL)
+
+COVID19Test_geoRegion_all[5:11] <- list(NULL)
+COVID19Test_geoRegion_all[11:12] <- list(NULL)
+COVID19Test_geoRegion_all[12:15] <- list(NULL)
+COVID19Test_geoRegion_all[16:22] <- list(NULL)
+COVID19Test_geoRegion_all[18] <- NULL
+COVID19Test_geoRegion_all[19:20] <- list(NULL)
+
+#Delete the rows for total of Switzerland and the Principality of Liechtenstein
 
 COVID19Cases_geoRegion <- COVID19Cases_geoRegion[!(COVID19Cases_geoRegion$geoRegion=="CH" | COVID19Cases_geoRegion$geoRegion=="FL" | COVID19Cases_geoRegion$geoRegion=="CHFL" ),]
 
@@ -111,39 +127,30 @@ COVID19Test_geoRegion_all <- COVID19Test_geoRegion_all[!(COVID19Test_geoRegion_a
 #Add a column with the region as a numeric so that the function dataprep can use it
 
 COVID19Cases_geoRegion <- cbind(COVID19Cases_geoRegion, as.numeric(as.factor(COVID19Cases_geoRegion$geoRegion)))
-colnames(COVID19Cases_geoRegion)[39] <- "num_geoRegion"
+colnames(COVID19Cases_geoRegion)[11] <- "num_geoRegion"
 
 COVID19Test_geoRegion_all <- cbind(COVID19Test_geoRegion_all, as.numeric(as.factor(COVID19Test_geoRegion_all$geoRegion)))
-colnames(COVID19Test_geoRegion_all)[44] <- "num_geoRegion"
+colnames(COVID19Test_geoRegion_all)[21] <- "num_geoRegion"
 
-#transforms the column "datum" from character format into some time format, but dataprep can only use numeric formats -> maybe solve with a loop? 26 cantons, 435 days
+#Test dataset has 26 cantons but starts a month earlier -> 465 days measured, but many NAs in the first months
+#Cases dataset has 26 cantons as well but the frist case was measured a month after testing had started
 
-COVID19Cases_geoRegion$datum <- as.POSIXct(COVID19Cases_geoRegion$datum, origin = "2020-02-23", tz = "CET", format = "%Y-%m-%d")
-
-COVID19Test_geoRegion_all$datum <- as.POSIXct(COVID19Test_geoRegion_all$datum, origin = "2020-01-24", tz = "CET", format = "%Y-%m-%d") #test dataset has 26 cantons but starts a month earlier -> 465 days measured, but many NAs in the first months
+#Add a numeric time variable starting from 1 (tests) and 31 (cases)
 
 COVID19Cases_geoRegion <- cbind(COVID19Cases_geoRegion, rep(c(31:465), times = 26))
+colnames(COVID19Cases_geoRegion)[12] <- "num_datum"
+
 COVID19Test_geoRegion_all <- cbind(COVID19Test_geoRegion_all, rep(c(1:465), times = 26))
+colnames(COVID19Test_geoRegion_all)[22] <- "num_datum"
 
-COVID19Test_geoRegion_all <- COVID19Test_geoRegion_all[which(COVID19Test_geoRegion_all$`rep(c(1:465), times = 26)`>30),]
-colnames(COVID19Cases_geoRegion)[3]<-"cases"
-colnames(COVID19Test_geoRegion_all)[2]<-"tests"
+#Delete the first 30 datapoints in the Test dataset as we cannot predict any cases in that time period anyway
+COVID19Test_geoRegion_all <- COVID19Test_geoRegion_all[which(COVID19Test_geoRegion_all$num_datum>30),]
 
-colnames(COVID19Cases_geoRegion)[40] <- "num_datum"
-colnames(COVID19Test_geoRegion_all)[45] <- "num_datum"
-
-synth_data <- cbind(COVID19Cases_geoRegion,COVID19Test_geoRegion_all)
-
-
-COVID19Cases_geoRegion<-cbind(COVID19Cases_geoRegion,COVID19Test_geoRegion_all$tests,COVID19Test_geoRegion_all$pos_anteil,COVID19Test_geoRegion_all$pos_anteil_mean7d)
-
-colnames(COVID19Cases_geoRegion)[41]<-"tests"
-colnames(COVID19Cases_geoRegion)[42]<-"pos_anteil"
-colnames(COVID19Cases_geoRegion)[43]<-"pos_anteil_mean7d"
-
+View(COVID19Cases_geoRegion)
+View(COVID19Test_geoRegion_all)
 ```
 
-
+3. Describe the datasets
 ```{r}
 #Exploratory data analysis and plots
 
